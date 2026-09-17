@@ -43,14 +43,33 @@ export async function runTapQuery<T = Record<string, unknown>>(
   try {
     response = await $fetch<string>(TAP_SYNC_URL, {
       method: 'GET',
-      query: { query: adql, format: 'json' },
-      responseType: 'text'
+      query: { REQUEST: 'doQuery', LANG: 'ADQL', QUERY: adql, FORMAT: 'json' },
+      responseType: 'text',
+      headers: {
+        'User-Agent': 'Exoplanetron4000/1.0 (+https://github.com/)',
+        Accept: 'application/json, text/plain, */*'
+      },
+      retry: 1,
+      timeout: 20000
     })
   } catch (err: any) {
+    // Distinguish "we got a response but it was an error" (upstream status +
+    // body are useful for diagnosing a bad query) from "never got a
+    // response" (true network/connectivity failure).
+    const upstreamStatus = err?.response?.status ?? err?.status
+    const upstreamBody =
+      typeof err?.response?._data === 'string'
+        ? err.response._data.slice(0, 2000)
+        : err?.data
+          ? JSON.stringify(err.data).slice(0, 2000)
+          : undefined
+
     throw createError({
       statusCode: 502,
-      statusMessage: 'Failed to reach the NASA Exoplanet Archive',
-      data: { cause: err?.message ?? String(err) }
+      statusMessage: upstreamStatus
+        ? `The NASA Exoplanet Archive returned an error (HTTP ${upstreamStatus})`
+        : 'Failed to reach the NASA Exoplanet Archive',
+      data: { cause: err?.message ?? String(err), upstreamStatus, upstreamBody }
     })
   }
 
