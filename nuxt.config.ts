@@ -1,4 +1,5 @@
 import glsl from 'vite-plugin-glsl'
+import { templateCompilerOptions } from '@tresjs/core'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -6,6 +7,13 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   ssr: true,
   css: ['~/assets/css/main.css'],
+  // Without this, Vue's template compiler tries to resolve <TresMesh>,
+  // <TresPerspectiveCamera> etc. as regular components and fails ("Failed
+  // to resolve component") — TresJS renders them itself via its custom
+  // renderer and just needs the compiler to leave the tags alone.
+  vue: {
+    compilerOptions: templateCompilerOptions.template.compilerOptions
+  },
   app: {
     head: {
       title: 'Exoplanetron 4000',
