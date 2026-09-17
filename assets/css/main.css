@@ -1,0 +1,48 @@
+:root {
+  --bg: #05070d;
+  --bg-panel: #0c1220;
+  --bg-panel-alt: #10192e;
+  --border: #1f2b45;
+  --text: #e7ecf7;
+  --text-dim: #93a0bf;
+  --accent: #7fd7ff;
+  --accent-warm: #ffb37f;
+  --hz-color: #57e389;
+  --danger: #ff6b6b;
+  --radius: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#__nuxt {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at top, #0a0f1c 0%, #05070d 60%);
+  color: var(--text);
+}
+
+a {
+  color: var(--accent);
+}
+
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--accent);
+  color: #05070d;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
