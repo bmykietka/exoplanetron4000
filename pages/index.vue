@@ -108,7 +108,12 @@ function formatStarStat(label: string, value: string | null) {
           </div>
 
           <div class="viewer-panel" :class="{ 'viewer-panel--3d': viewMode === '3d' }">
-            <SystemViewer3D v-if="viewMode === '3d'" :system="detail" />
+            <ClientOnly v-if="viewMode === '3d'">
+              <SystemViewer3D :system="detail" />
+              <template #fallback>
+                <div class="viewer-loading">Loading 3D viewer…</div>
+              </template>
+            </ClientOnly>
             <SystemViewer2D v-else :system="detail" />
           </div>
 
@@ -323,6 +328,14 @@ function formatStarStat(label: string, value: string | null) {
 .viewer-panel > * {
   flex: 1;
   min-width: 0;
+}
+
+.viewer-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 0.9rem;
 }
 
 .planet-count {
