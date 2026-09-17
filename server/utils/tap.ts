@@ -46,8 +46,22 @@ export async function runTapQuery<T = Record<string, unknown>>(
       query: { REQUEST: 'doQuery', LANG: 'ADQL', QUERY: adql, FORMAT: 'json' },
       responseType: 'text',
       headers: {
-        'User-Agent': 'Exoplanetron4000/1.0 (+https://github.com/)',
-        Accept: 'application/json, text/plain, */*'
+        // A generic/custom User-Agent (or a sparse header set) is exactly what
+        // trips Cloudflare's bot heuristics on this host, which serves a JS
+        // challenge page instead of the TAP response. Mimicking a real
+        // browser's full header set avoids that.
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        Accept: 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        Referer: 'https://exoplanetarchive.ipac.caltech.edu/',
+        'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24", "Google Chrome";v="131"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin'
       },
       retry: 1,
       timeout: 20000
