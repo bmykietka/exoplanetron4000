@@ -1,3 +1,5 @@
+import { browserFetchText } from './browserFetch'
+
 const TAP_SYNC_URL = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync'
 
 interface CacheEntry {
@@ -29,6 +31,11 @@ export function adqlLiteral(value: string): string {
 /**
  * Runs an ADQL query against the NASA Exoplanet Archive TAP service and
  * returns the parsed rows. Results are cached in-memory per exact query.
+ *
+ * The archive's edge issues a Cloudflare JS challenge to plain HTTP clients
+ * (confirmed even with a full realistic browser header set), so the actual
+ * request is made through a persistent headless-browser page — see
+ * `browserFetch.ts` — rather than a bare server-side fetch.
  */
 export async function runTapQuery<T = Record<string, unknown>>(
   adql: string,
@@ -39,51 +46,21 @@ export async function runTapQuery<T = Record<string, unknown>>(
   const cached = getCached<T[]>(cacheKey)
   if (cached) return cached
 
+  const url = `${TAP_SYNC_URL}?${new URLSearchParams({
+    REQUEST: 'doQuery',
+    LANG: 'ADQL',
+    QUERY: adql,
+    FORMAT: 'json'
+  }).toString()}`
+
   let response: string
   try {
-    response = await $fetch<string>(TAP_SYNC_URL, {
-      method: 'GET',
-      query: { REQUEST: 'doQuery', LANG: 'ADQL', QUERY: adql, FORMAT: 'json' },
-      responseType: 'text',
-      headers: {
-        // A generic/custom User-Agent (or a sparse header set) is exactly what
-        // trips Cloudflare's bot heuristics on this host, which serves a JS
-        // challenge page instead of the TAP response. Mimicking a real
-        // browser's full header set avoids that.
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        Accept: 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        Referer: 'https://exoplanetarchive.ipac.caltech.edu/',
-        'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24", "Google Chrome";v="131"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"Windows"',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin'
-      },
-      retry: 1,
-      timeout: 20000
-    })
+    response = await browserFetchText(url)
   } catch (err: any) {
-    // Distinguish "we got a response but it was an error" (upstream status +
-    // body are useful for diagnosing a bad query) from "never got a
-    // response" (true network/connectivity failure).
-    const upstreamStatus = err?.response?.status ?? err?.status
-    const upstreamBody =
-      typeof err?.response?._data === 'string'
-        ? err.response._data.slice(0, 2000)
-        : err?.data
-          ? JSON.stringify(err.data).slice(0, 2000)
-          : undefined
-
     throw createError({
       statusCode: 502,
-      statusMessage: upstreamStatus
-        ? `The NASA Exoplanet Archive returned an error (HTTP ${upstreamStatus})`
-        : 'Failed to reach the NASA Exoplanet Archive',
-      data: { cause: err?.message ?? String(err), upstreamStatus, upstreamBody }
+      statusMessage: 'Failed to reach the NASA Exoplanet Archive',
+      data: { cause: err?.message ?? String(err) }
     })
   }
 
