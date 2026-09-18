@@ -5,6 +5,8 @@ import * as THREE from 'three'
 import type { PlanetRecord, SystemDetail } from '~~/shared/types/exoplanet'
 import starVertexShader from '~/shaders/star.vert.glsl'
 import starFragmentShader from '~/shaders/star.frag.glsl'
+import starGlowVertexShader from '~/shaders/starGlow.vert.glsl'
+import starGlowFragmentShader from '~/shaders/starGlow.frag.glsl'
 import hzVertexShader from '~/shaders/habitableZone.vert.glsl'
 import hzFragmentShader from '~/shaders/habitableZone.frag.glsl'
 
@@ -116,8 +118,13 @@ const starUniforms = {
   uTime: { value: 0 },
   uColor: { value: starColor.value }
 }
+const starGlowUniforms = {
+  uTime: { value: 0 },
+  uColor: { value: starColor.value }
+}
 watch(starColor, (c) => {
   starUniforms.uColor.value = c
+  starGlowUniforms.uColor.value = c
 })
 
 // A computed (rather than a mutated plain ref) so the template's v-if reacts
@@ -139,6 +146,7 @@ const hzUniforms = computed(() => {
 const { onBeforeRender } = useLoop()
 onBeforeRender(({ delta, elapsed }) => {
   starUniforms.uTime.value = elapsed
+  starGlowUniforms.uTime.value = elapsed
   if (hzUniforms.value) hzUniforms.value.uTime.value = elapsed
   for (let i = 0; i < angles.value.length; i++) {
     angles.value[i] += (planetViews.value[i]?.angularSpeed ?? 0) * delta
@@ -168,6 +176,20 @@ watch(activePlanet, (p) => emit('activePlanet', p), { immediate: true })
       :vertex-shader="starVertexShader"
       :fragment-shader="starFragmentShader"
       :uniforms="starUniforms"
+    />
+  </TresMesh>
+
+  <!-- Star halo/glow: a larger sphere, back faces only, additively blended -->
+  <TresMesh :scale="starRadius * 1.9">
+    <TresSphereGeometry :args="[1, 32, 32]" />
+    <TresShaderMaterial
+      :vertex-shader="starGlowVertexShader"
+      :fragment-shader="starGlowFragmentShader"
+      :uniforms="starGlowUniforms"
+      :transparent="true"
+      :depth-write="false"
+      :blending="THREE.AdditiveBlending"
+      :side="THREE.BackSide"
     />
   </TresMesh>
 

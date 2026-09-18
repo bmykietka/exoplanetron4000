@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import type { PlanetRecord, SystemDetail } from '~~/shared/types/exoplanet'
 
-const props = defineProps<{ system: SystemDetail }>()
+const props = withDefaults(defineProps<{ system: SystemDetail; compact?: boolean }>(), { compact: false })
 
-const BASELINE_WIDTH = 1000
-const LEFT_PAD = 70
-const RIGHT_PAD = 50
-const TRACK_HEIGHT = 240
-const TRACK_Y = TRACK_HEIGHT / 2
+// Compact mode (used for the small side panels in the mixed view) shrinks
+// the whole layout and dials back marker sizes/lane offsets to fit a much
+// narrower container instead of the full-width baseline.
+const BASELINE_WIDTH = computed(() => (props.compact ? 300 : 1000))
+const LEFT_PAD = computed(() => (props.compact ? 26 : 70))
+const RIGHT_PAD = computed(() => (props.compact ? 16 : 50))
+const TRACK_HEIGHT = computed(() => (props.compact ? 120 : 240))
+const TRACK_Y = computed(() => TRACK_HEIGHT.value / 2)
+const LANE_OFFSET_PX = computed(() => (props.compact ? 16 : 34))
+const SIZE_SCALE = computed(() => (props.compact ? 0.6 : 1))
 
 const zoom = ref(1)
 
@@ -24,12 +29,12 @@ const maxAu = computed(() => {
   return Math.max(planetMax, hzMax, 0.1) * 1.12
 })
 
-const unitsPerAu = computed(() => (BASELINE_WIDTH - LEFT_PAD - RIGHT_PAD) / maxAu.value)
+const unitsPerAu = computed(() => (BASELINE_WIDTH.value - LEFT_PAD.value - RIGHT_PAD.value) / maxAu.value)
 
-const svgWidth = computed(() => LEFT_PAD + RIGHT_PAD + maxAu.value * unitsPerAu.value * zoom.value)
+const svgWidth = computed(() => LEFT_PAD.value + RIGHT_PAD.value + maxAu.value * unitsPerAu.value * zoom.value)
 
 function auToX(au: number): number {
-  return LEFT_PAD + au * unitsPerAu.value * zoom.value
+  return LEFT_PAD.value + au * unitsPerAu.value * zoom.value
 }
 
 const AU_TICK_STEPS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
@@ -53,10 +58,10 @@ const starColor = computed(() => {
   const [r, g, b] = starColorForTemp(props.system.star.effectiveTempK)
   return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`
 })
-const starPixelRadius = computed(() => 10 + starVisualRadius(props.system.star.radiusSolar) * 10)
+const starPixelRadius = computed(() => (10 + starVisualRadius(props.system.star.radiusSolar) * 10) * SIZE_SCALE.value)
 
 function planetPixelRadius(radiusEarth: number | null): number {
-  return 3 + planetVisualRadius(radiusEarth) * 34
+  return (3 + planetVisualRadius(radiusEarth) * 34) * SIZE_SCALE.value
 }
 
 function planetFill(radiusEarth: number | null): string {
@@ -80,7 +85,7 @@ const planetViews = computed<PlanetView[]>(() =>
     x: auToX(planet.orbitSemiMajorAxisAu),
     r: planetPixelRadius(planet.radiusEarth),
     fill: planetFill(planet.radiusEarth),
-    laneOffset: i % 2 === 0 ? -1 : 1
+    laneOffset: (i % 2 === 0 ? -1 : 1) * LANE_OFFSET_PX.value
   }))
 )
 
@@ -101,7 +106,7 @@ function resetZoom() {
 </script>
 
 <template>
-  <div class="viewer-2d">
+  <div class="viewer-2d" :class="{ compact }">
     <div class="controls">
       <label class="zoom-control">
         Zoom
@@ -164,7 +169,7 @@ function resetZoom() {
           :x1="v.x"
           :x2="v.x"
           :y1="TRACK_Y"
-          :y2="TRACK_Y + v.laneOffset * 34"
+          :y2="TRACK_Y + v.laneOffset"
           stroke="#2a3556"
           stroke-width="1"
         />
@@ -177,7 +182,7 @@ function resetZoom() {
         <g v-for="v in planetViews" :key="v.planet.name">
           <circle
             :cx="v.x"
-            :cy="TRACK_Y + v.laneOffset * 34"
+            :cy="TRACK_Y + v.laneOffset"
             :r="v.r"
             :fill="v.fill"
             :stroke="v.planet.inHabitableZone ? '#57e389' : 'transparent'"
@@ -189,7 +194,7 @@ function resetZoom() {
           />
           <text
             :x="v.x"
-            :y="TRACK_Y + v.laneOffset * 34 + v.laneOffset * (v.r + 12)"
+            :y="TRACK_Y + v.laneOffset + Math.sign(v.laneOffset) * (v.r + 12)"
             text-anchor="middle"
             class="planet-label"
             :class="{ active: activePlanet === v.planet }"
@@ -200,7 +205,7 @@ function resetZoom() {
       </svg>
     </div>
 
-    <div class="legend">
+    <div v-if="!compact" class="legend">
       <span><i class="swatch hz" /> habitable zone (bright = conservative, dim = optimistic)</span>
       <span><i class="swatch rocky" /> rocky</span>
       <span><i class="swatch subneptune" /> sub-Neptune</span>
@@ -383,5 +388,45 @@ svg {
 
 .hz-no {
   color: var(--text-dim);
+}
+
+.viewer-2d.compact {
+  gap: 0.4rem;
+}
+
+.viewer-2d.compact .controls {
+  gap: 0.5rem;
+}
+
+.viewer-2d.compact .zoom-control {
+  font-size: 0.68rem;
+  gap: 0.3rem;
+}
+
+.viewer-2d.compact .zoom-control input {
+  width: 60px;
+}
+
+.viewer-2d.compact .reset-btn {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.68rem;
+}
+
+.viewer-2d.compact .ticks text {
+  font-size: 8px;
+}
+
+.viewer-2d.compact .planet-label {
+  font-size: 8px;
+}
+
+.viewer-2d.compact .info-card {
+  padding: 0.6rem 0.75rem;
+  min-width: 160px;
+  font-size: 0.9em;
+}
+
+.viewer-2d.compact .scroll-area {
+  background: rgba(3, 5, 10, 0.55);
 }
 </style>

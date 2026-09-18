@@ -38,6 +38,7 @@ function formatStarStat(label: string, value: string | null) {
       <div class="search-row">
         <SystemSearch v-model="selectedHostname" />
         <button type="button" class="dice-btn" title="Jump to a random system" @click="pickRandomSystem">🎲 Random</button>
+        <NuxtLink to="/mixed" class="mixed-link" title="Browse multiple systems at once">🪐 Mixed view</NuxtLink>
       </div>
     </header>
 
@@ -181,6 +182,22 @@ function formatStarStat(label: string, value: string | null) {
 
 .dice-btn:hover {
   border-color: var(--accent);
+}
+
+.mixed-link {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.9rem;
+  white-space: nowrap;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.mixed-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .content {
