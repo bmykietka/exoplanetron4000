@@ -56,7 +56,7 @@ const hzScene = computed(() => {
   if (z.optimisticInnerAu === null || z.optimisticOuterAu === null) return null
   return {
     conservativeInner: z.conservativeInnerAu !== null ? toSceneRadius(z.conservativeInnerAu) : toSceneRadius(z.optimisticInnerAu),
-    conservativeOuter: z.conservativeOuterAu !== null ? toSceneRadius(z.conservativeOuterAu) : toSceneRadius(z.optimisticInnerAu),
+    conservativeOuter: z.conservativeOuterAu !== null ? toSceneRadius(z.conservativeOuterAu) : toSceneRadius(z.optimisticOuterAu),
     optimisticInner: toSceneRadius(z.optimisticInnerAu),
     optimisticOuter: toSceneRadius(z.optimisticOuterAu)
   }
@@ -229,6 +229,21 @@ watch(activePlanet, (p) => emit('activePlanet', p), { immediate: true })
   >
     <TresSphereGeometry :args="[1, 32, 32]" />
     <TresMeshStandardMaterial :color="v.color" :roughness="0.85" :metalness="0.05" />
+
+    <!-- Habitable-zone halo: a soft green glow shell, visible from any
+         angle, so an in-HZ planet doesn't rely on visually judging its
+         overlap with the (semi-transparent, sometimes subtle) HZ ring. -->
+    <TresMesh v-if="v.planet.inHabitableZone">
+      <TresSphereGeometry :args="[1.8, 20, 20]" />
+      <TresMeshBasicMaterial
+        color="#57e389"
+        :transparent="true"
+        :opacity="0.45"
+        :side="THREE.BackSide"
+        :depth-write="false"
+      />
+    </TresMesh>
+
     <Html
       v-if="activePlanet === v.planet"
       :position="[0, v.visualRadius + 0.35, 0]"

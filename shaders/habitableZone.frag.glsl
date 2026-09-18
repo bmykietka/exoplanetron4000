@@ -23,7 +23,10 @@ void main() {
 
   float shimmer = 0.94 + 0.06 * sin(uTime * 0.6 + r * 6.0);
 
-  float alpha = mix(optimistic * 0.16, conservative * 0.34, conservative) * shimmer;
+  // Keep the optimistic-only fringe clearly visible on its own (not just a
+  // near-invisible hint) so a planet sitting there doesn't read as "outside"
+  // the zone just because the shading is faint at that radius.
+  float alpha = mix(optimistic * 0.28, conservative * 0.46, conservative) * shimmer;
   vec3 color = mix(uColor * 0.75, uColor, conservative);
 
   if (alpha < 0.003) discard;
