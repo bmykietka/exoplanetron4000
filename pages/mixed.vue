@@ -43,6 +43,74 @@ function updateRight(index: number, name: string) {
 function focusOn(name: string) {
   focused.value = name
 }
+
+// Resizable side columns. Widths are a per-device preference (not part of
+// the shareable URL state above) so they live in localStorage instead.
+const MIN_COL_WIDTH = 260
+const MAX_COL_WIDTH = 640
+const DEFAULT_COL_WIDTH = 380
+const WIDTH_STORAGE_KEY = { left: 'exoplanetron-mixed-left-width', right: 'exoplanetron-mixed-right-width' } as const
+
+const leftWidth = ref(DEFAULT_COL_WIDTH)
+const rightWidth = ref(DEFAULT_COL_WIDTH)
+
+function clampWidth(w: number): number {
+  const viewportMax = typeof window !== 'undefined' ? window.innerWidth * 0.45 : MAX_COL_WIDTH
+  return Math.min(Math.max(w, MIN_COL_WIDTH), Math.min(MAX_COL_WIDTH, viewportMax))
+}
+
+onMounted(() => {
+  try {
+    const savedLeft = localStorage.getItem(WIDTH_STORAGE_KEY.left)
+    const savedRight = localStorage.getItem(WIDTH_STORAGE_KEY.right)
+    if (savedLeft) leftWidth.value = clampWidth(Number(savedLeft))
+    if (savedRight) rightWidth.value = clampWidth(Number(savedRight))
+  } catch {
+    // localStorage may be unavailable (private browsing, etc.) — defaults are fine.
+  }
+})
+
+function persistWidths() {
+  try {
+    localStorage.setItem(WIDTH_STORAGE_KEY.left, String(leftWidth.value))
+    localStorage.setItem(WIDTH_STORAGE_KEY.right, String(rightWidth.value))
+  } catch {
+    // ignore
+  }
+}
+
+let dragSide: 'left' | 'right' | null = null
+let dragStartX = 0
+let dragStartWidth = 0
+
+function startResize(side: 'left' | 'right', event: PointerEvent) {
+  event.preventDefault()
+  dragSide = side
+  dragStartX = event.clientX
+  dragStartWidth = side === 'left' ? leftWidth.value : rightWidth.value
+  window.addEventListener('pointermove', onResizeMove)
+  window.addEventListener('pointerup', onResizeEnd)
+}
+
+function onResizeMove(event: PointerEvent) {
+  if (!dragSide) return
+  const delta = event.clientX - dragStartX
+  const next = clampWidth(dragStartWidth + (dragSide === 'left' ? delta : -delta))
+  if (dragSide === 'left') leftWidth.value = next
+  else rightWidth.value = next
+}
+
+function onResizeEnd() {
+  dragSide = null
+  window.removeEventListener('pointermove', onResizeMove)
+  window.removeEventListener('pointerup', onResizeEnd)
+  persistWidths()
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pointermove', onResizeMove)
+  window.removeEventListener('pointerup', onResizeEnd)
+})
 </script>
 
 <template>
@@ -60,7 +128,7 @@ function focusOn(name: string) {
       <div v-else-if="focusedError" class="backdrop-state error">{{ focusedError }}</div>
     </div>
 
-    <aside class="side-column left scrollbar-thin">
+    <aside class="side-column left scrollbar-thin" :style="{ '--col-width': leftWidth + 'px' }">
       <MixedSystemPanel
         v-for="(name, i) in left"
         :key="`left-${i}-${name}`"
@@ -69,9 +137,10 @@ function focusOn(name: string) {
         @update:hostname="updateLeft(i, $event)"
         @focus="focusOn(name)"
       />
+      <div class="resize-handle" title="Drag to resize" @pointerdown="startResize('left', $event)" />
     </aside>
 
-    <aside class="side-column right scrollbar-thin">
+    <aside class="side-column right scrollbar-thin" :style="{ '--col-width': rightWidth + 'px' }">
       <MixedSystemPanel
         v-for="(name, i) in right"
         :key="`right-${i}-${name}`"
@@ -80,6 +149,7 @@ function focusOn(name: string) {
         @update:hostname="updateRight(i, $event)"
         @focus="focusOn(name)"
       />
+      <div class="resize-handle" title="Drag to resize" @pointerdown="startResize('right', $event)" />
     </aside>
   </div>
 </template>
@@ -141,8 +211,7 @@ function focusOn(name: string) {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 320px;
-  max-width: 38vw;
+  width: var(--col-width, 380px);
   padding: 3.5rem 0.9rem 1rem;
   display: flex;
   flex-direction: column;
@@ -169,6 +238,40 @@ function focusOn(name: string) {
   background: linear-gradient(to left, rgba(3, 5, 10, 0.35), transparent);
 }
 
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: ew-resize;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.resize-handle:hover::after {
+  background: var(--accent);
+}
+
+.side-column.left .resize-handle {
+  right: 0;
+}
+
+.side-column.right .resize-handle {
+  left: 0;
+}
+
 @media (max-width: 900px) {
   .mixed-page {
     position: static;
@@ -190,10 +293,13 @@ function focusOn(name: string) {
 
   .side-column {
     position: static;
-    width: 100%;
-    max-width: none;
+    width: 100% !important;
     padding: 1rem;
     background: none;
+  }
+
+  .resize-handle {
+    display: none;
   }
 }
 </style>

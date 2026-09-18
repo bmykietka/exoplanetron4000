@@ -4,9 +4,29 @@ import type { PlanetRecord, SystemDetail } from '~~/shared/types/exoplanet'
 const props = withDefaults(defineProps<{ system: SystemDetail; compact?: boolean }>(), { compact: false })
 
 // Compact mode (used for the small side panels in the mixed view) shrinks
-// the whole layout and dials back marker sizes/lane offsets to fit a much
-// narrower container instead of the full-width baseline.
-const BASELINE_WIDTH = computed(() => (props.compact ? 300 : 1000))
+// the whole layout and dials back marker sizes/lane offsets. Its baseline
+// width tracks the actual container width (via ResizeObserver) rather than
+// a fixed constant, so the chart fills however wide its panel/column is —
+// including when that width is user-resizable, as in the mixed view.
+const scrollAreaEl = ref<HTMLElement | null>(null)
+const measuredWidth = ref<number | null>(null)
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (!props.compact || !scrollAreaEl.value) return
+  resizeObserver = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect.width
+    if (width) measuredWidth.value = width
+  })
+  resizeObserver.observe(scrollAreaEl.value)
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+})
+
+const BASELINE_WIDTH = computed(() => (props.compact ? (measuredWidth.value ?? 300) : 1000))
 const LEFT_PAD = computed(() => (props.compact ? 26 : 70))
 const RIGHT_PAD = computed(() => (props.compact ? 16 : 50))
 const TRACK_HEIGHT = computed(() => (props.compact ? 120 : 240))
@@ -116,7 +136,7 @@ function resetZoom() {
       <button type="button" class="reset-btn" @click="resetZoom">Fit whole system</button>
     </div>
 
-    <div class="scroll-area scrollbar-thin">
+    <div ref="scrollAreaEl" class="scroll-area scrollbar-thin">
       <svg :width="svgWidth" :height="TRACK_HEIGHT" role="img" :aria-label="`Side view of the ${system.hostname} system`">
         <defs>
           <linearGradient id="hz-optimistic" x1="0" x2="1" y1="0" y2="0">
