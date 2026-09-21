@@ -41,7 +41,7 @@ function cancelEdit() {
           <h3>{{ hostname }}</h3>
           <span v-if="detail" class="panel-subtitle">
             {{ detail.star.spectralType ?? 'Unknown type' }} · {{ detail.planets.length }} planet{{ detail.planets.length === 1 ? '' : 's' }}
-            <template v-if="detail.star.distancePc"> · {{ detail.star.distancePc.toFixed(1) }} pc</template>
+            <template v-if="detail.star.distancePc"> · {{ formatDistance(detail.star.distancePc) }}</template>
           </span>
         </div>
         <button type="button" class="icon-btn" title="Swap for another system" @click="startEdit">⇄</button>
@@ -52,7 +52,7 @@ function cancelEdit() {
 
       <template v-else-if="detail">
         <div class="mini-stats">
-          <span>{{ detail.star.effectiveTempK ? `${Math.round(detail.star.effectiveTempK)} K` : '—' }}</span>
+          <span>{{ formatTemperature(detail.star.effectiveTempK) ?? '—' }}</span>
           <span>{{ detail.star.radiusSolar ? `${detail.star.radiusSolar.toFixed(2)} R☉` : '—' }}</span>
           <span>{{ detail.star.massSolar ? `${detail.star.massSolar.toFixed(2)} M☉` : '—' }}</span>
           <span v-if="detail.habitableZone.conservativeInnerAu && detail.habitableZone.conservativeOuterAu">

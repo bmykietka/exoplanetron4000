@@ -3,6 +3,7 @@ import { useLoop } from '@tresjs/core'
 import { Html, OrbitControls, Stars } from '@tresjs/cientos'
 import * as THREE from 'three'
 import type { PlanetRecord, SystemDetail } from '~~/shared/types/exoplanet'
+import type { SolarSystemPlanet } from '~/utils/solarSystem'
 import starVertexShader from '~/shaders/star.vert.glsl'
 import starFragmentShader from '~/shaders/star.frag.glsl'
 import starGlowVertexShader from '~/shaders/starGlow.vert.glsl'
@@ -20,7 +21,9 @@ import hzFragmentShader from '~/shaders/habitableZone.frag.glsl'
  * component it renders.
  */
 
-const props = defineProps<{ system: SystemDetail }>()
+const props = withDefaults(defineProps<{ system: SystemDetail; showSolarSystem?: boolean }>(), {
+  showSolarSystem: false
+})
 const emit = defineEmits<{ activePlanet: [planet: PlanetRecord | null] }>()
 
 const TARGET_SCENE_RADIUS = 15
@@ -36,7 +39,12 @@ const orbitingPlanets = computed(() =>
 const maxOrbitAu = computed(() => {
   const planetMax = orbitingPlanets.value.reduce((max, p) => Math.max(max, p.orbitSemiMajorAxisAu), 0)
   const hzMax = props.system.habitableZone.optimisticOuterAu ?? 0
-  return Math.max(planetMax, hzMax, 0.1)
+  // Including Neptune's orbit in the scaling whenever the comparison layer is
+  // on means both systems share one consistent scale — the whole point of
+  // the comparison — even though it can make the current system's own
+  // planets bunch up near the star for compact systems like TRAPPIST-1.
+  const solarMax = props.showSolarSystem ? SOLAR_SYSTEM_MAX_ORBIT_AU : 0
+  return Math.max(planetMax, hzMax, solarMax, 0.1)
 })
 
 const unitsPerAu = computed(() => {
@@ -68,6 +76,27 @@ function planetColor(radiusEarth: number | null): THREE.Color {
   if (r < 4) return new THREE.Color('#e0c39a') // sub-neptune / mini-neptune
   return new THREE.Color('#e0a672') // gas giant
 }
+
+interface SolarSystemPlanetView {
+  planet: SolarSystemPlanet
+  sceneRadius: number
+  visualRadius: number
+  angle: number
+}
+
+// The reference layer is static (no orbit animation) — its own 8 planets
+// don't share a meaningful common time base with whatever exoplanet system
+// is on screen, so a fixed, evenly-spread layout reads more clearly than an
+// animation that implies a relationship between the two that isn't there.
+const solarSystemViews = computed<SolarSystemPlanetView[]>(() => {
+  if (!props.showSolarSystem) return []
+  return SOLAR_SYSTEM_PLANETS.map((planet, i) => ({
+    planet,
+    sceneRadius: toSceneRadius(planet.orbitAu),
+    visualRadius: planetVisualRadius(planet.radiusEarth),
+    angle: i * GOLDEN_ANGLE + Math.PI / 8
+  }))
+})
 
 interface PlanetView {
   planet: PlanetRecord & { orbitSemiMajorAxisAu: number }
@@ -254,4 +283,26 @@ watch(activePlanet, (p) => emit('activePlanet', p), { immediate: true })
       {{ v.planet.letter }}
     </Html>
   </TresMesh>
+
+  <!-- Solar system comparison layer: orbits + planets of our own solar
+       system, laid over the same star position, for scale reference. -->
+  <template v-if="showSolarSystem">
+    <TresMesh v-for="v in solarSystemViews" :key="`ss-orbit-${v.planet.name}`" :rotation="[-Math.PI / 2, 0, 0]" :position="[0, 0.05, 0]">
+      <TresRingGeometry :args="[v.sceneRadius - 0.01, v.sceneRadius + 0.01, 128]" />
+      <TresMeshBasicMaterial color="#6fa3e0" :transparent="true" :opacity="0.3" :side="THREE.DoubleSide" />
+    </TresMesh>
+
+    <TresMesh
+      v-for="v in solarSystemViews"
+      :key="`ss-planet-${v.planet.name}`"
+      :position="[Math.cos(v.angle) * v.sceneRadius, 0.05, Math.sin(v.angle) * v.sceneRadius]"
+      :scale="v.visualRadius"
+    >
+      <TresSphereGeometry :args="[1, 20, 20]" />
+      <TresMeshBasicMaterial :color="v.planet.color" />
+      <Html :position="[0, 1.4, 0]" center :transform="false" class="solar-system-label">
+        {{ v.planet.name }}
+      </Html>
+    </TresMesh>
+  </template>
 </template>

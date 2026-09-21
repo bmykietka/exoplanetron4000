@@ -115,11 +115,6 @@ const hoveredPlanet = ref<PlanetRecord | null>(null)
 const selectedPlanet = ref<PlanetRecord | null>(null)
 const activePlanet = computed(() => hoveredPlanet.value ?? selectedPlanet.value)
 
-function formatAu(au: number | null): string {
-  if (au === null) return 'unknown'
-  return `${au < 0.01 ? au.toExponential(2) : au.toFixed(3)} AU`
-}
-
 function resetZoom() {
   zoom.value = 1
 }
@@ -237,13 +232,13 @@ function resetZoom() {
       <h3>{{ activePlanet.name }}</h3>
       <dl>
         <dt>Orbit distance</dt>
-        <dd>{{ formatAu(activePlanet.orbitSemiMajorAxisAu) }}</dd>
+        <dd>{{ formatOrbitDistance(activePlanet.orbitSemiMajorAxisAu) ?? 'unknown' }}</dd>
         <dt>Radius</dt>
-        <dd>{{ activePlanet.radiusEarth ? `${activePlanet.radiusEarth.toFixed(2)} R⊕` : 'unknown' }}</dd>
+        <dd>{{ formatPlanetRadius(activePlanet.radiusEarth) ?? 'unknown' }}</dd>
         <dt>Mass</dt>
-        <dd>{{ activePlanet.massEarth ? `${activePlanet.massEarth.toFixed(2)} M⊕` : 'unknown' }}</dd>
+        <dd>{{ formatPlanetMass(activePlanet.massEarth) ?? 'unknown' }}</dd>
         <dt>Eq. temperature</dt>
-        <dd>{{ activePlanet.equilibriumTempK ? `${Math.round(activePlanet.equilibriumTempK)} K` : 'unknown' }}</dd>
+        <dd>{{ formatTemperature(activePlanet.equilibriumTempK) ?? 'unknown' }}</dd>
         <dt>Habitable zone</dt>
         <dd :class="{ 'hz-yes': activePlanet.inHabitableZone, 'hz-no': activePlanet.inHabitableZone === false }">
           {{ activePlanet.inHabitableZone === null ? 'unknown' : activePlanet.inHabitableZone ? 'within HZ' : 'outside HZ' }}

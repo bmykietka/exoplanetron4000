@@ -64,7 +64,7 @@ function formatStarStat(label: string, value: string | null) {
               <span class="subtitle">
                 {{ detail.star.spectralType ?? 'Unknown type' }} star ·
                 {{ detail.planets.length }} known planet{{ detail.planets.length === 1 ? '' : 's' }}
-                <template v-if="detail.star.distancePc"> · {{ detail.star.distancePc.toFixed(1) }} pc away</template>
+                <template v-if="detail.star.distancePc"> · {{ formatDistance(detail.star.distancePc) }} away</template>
               </span>
             </div>
             <div class="view-toggle" role="tablist" aria-label="Viewer mode">
@@ -80,7 +80,7 @@ function formatStarStat(label: string, value: string | null) {
           <div class="star-stats">
             <div class="stat">
               <span class="stat-label">Effective temp</span>
-              <span class="stat-value">{{ detail.star.effectiveTempK ? `${Math.round(detail.star.effectiveTempK)} K` : '—' }}</span>
+              <span class="stat-value">{{ formatTemperature(detail.star.effectiveTempK) ?? '—' }}</span>
             </div>
             <div class="stat">
               <span class="stat-label">Radius</span>

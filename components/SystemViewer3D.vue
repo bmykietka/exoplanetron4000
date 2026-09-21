@@ -6,30 +6,31 @@ import type { PlanetRecord, SystemDetail } from '~~/shared/types/exoplanet'
 defineProps<{ system: SystemDetail }>()
 
 const activePlanet = ref<PlanetRecord | null>(null)
-
-function formatAu(au: number | null): string {
-  if (au === null) return 'unknown'
-  return `${au < 0.01 ? au.toExponential(2) : au.toFixed(3)} AU`
-}
+const showSolarSystem = ref(false)
 </script>
 
 <template>
   <div class="viewer-3d">
     <TresCanvas clear-color="#03050a" :output-color-space="THREE.SRGBColorSpace">
-      <SystemScene3D :system="system" @active-planet="activePlanet = $event" />
+      <SystemScene3D :system="system" :show-solar-system="showSolarSystem" @active-planet="activePlanet = $event" />
     </TresCanvas>
+
+    <label class="solar-system-toggle">
+      <input v-model="showSolarSystem" type="checkbox" />
+      Compare to our solar system
+    </label>
 
     <div v-if="activePlanet" class="info-card">
       <h3>{{ activePlanet.name }}</h3>
       <dl>
         <dt>Orbit distance</dt>
-        <dd>{{ formatAu(activePlanet.orbitSemiMajorAxisAu) }}</dd>
+        <dd>{{ formatOrbitDistance(activePlanet.orbitSemiMajorAxisAu) ?? 'unknown' }}</dd>
         <dt>Radius</dt>
-        <dd>{{ activePlanet.radiusEarth ? `${activePlanet.radiusEarth.toFixed(2)} R⊕` : 'unknown' }}</dd>
+        <dd>{{ formatPlanetRadius(activePlanet.radiusEarth) ?? 'unknown' }}</dd>
         <dt>Mass</dt>
-        <dd>{{ activePlanet.massEarth ? `${activePlanet.massEarth.toFixed(2)} M⊕` : 'unknown' }}</dd>
+        <dd>{{ formatPlanetMass(activePlanet.massEarth) ?? 'unknown' }}</dd>
         <dt>Eq. temperature</dt>
-        <dd>{{ activePlanet.equilibriumTempK ? `${Math.round(activePlanet.equilibriumTempK)} K` : 'unknown' }}</dd>
+        <dd>{{ formatTemperature(activePlanet.equilibriumTempK) ?? 'unknown' }}</dd>
         <dt>Habitable zone</dt>
         <dd :class="{ 'hz-yes': activePlanet.inHabitableZone, 'hz-no': activePlanet.inHabitableZone === false }">
           {{ activePlanet.inHabitableZone === null ? 'unknown' : activePlanet.inHabitableZone ? 'within HZ' : 'outside HZ' }}
@@ -110,11 +111,48 @@ function formatAu(au: number | null): string {
   pointer-events: none;
 }
 
+.solar-system-toggle {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(5, 7, 13, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem 0.4rem 0.6rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  user-select: none;
+}
+
+.solar-system-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.solar-system-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 :global(.planet-label) {
   color: #fff;
   font-size: 11px;
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+:global(.solar-system-label) {
+  color: #a9c6f0;
+  font-size: 10px;
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
   white-space: nowrap;
 }
