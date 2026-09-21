@@ -1,4 +1,4 @@
-import type { SystemDetail, SystemSummary } from '~~/shared/types/exoplanet'
+import type { SystemDetail, SystemPosition, SystemSummary } from '~~/shared/types/exoplanet'
 
 /**
  * Loads (and caches for the app's lifetime) the full list of known host
@@ -64,4 +64,29 @@ export function useSystemDetail(hostname: Ref<string | null>) {
   )
 
   return { detail, pending, error }
+}
+
+/**
+ * Loads (and caches for the app's lifetime) every known host star's sky
+ * position and distance, for the galaxy map view.
+ */
+export function useSystemPositions() {
+  const positions = useState<SystemPosition[]>('exoplanet-system-positions', () => [])
+  const pending = useState<boolean>('exoplanet-system-positions-pending', () => false)
+  const error = useState<string | null>('exoplanet-system-positions-error', () => null)
+
+  async function ensureLoaded() {
+    if (positions.value.length > 0 || pending.value) return
+    pending.value = true
+    error.value = null
+    try {
+      positions.value = await $fetch<SystemPosition[]>('/api/systems/positions')
+    } catch (err: any) {
+      error.value = err?.data?.statusMessage || err?.message || 'Failed to load system positions'
+    } finally {
+      pending.value = false
+    }
+  }
+
+  return { positions, pending, error, ensureLoaded }
 }

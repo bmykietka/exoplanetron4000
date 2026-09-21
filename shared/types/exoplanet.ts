@@ -52,3 +52,12 @@ export interface SystemSummary {
   numPlanets: number
   distancePc: number | null
 }
+
+/** A host star's sky position, for plotting on the galaxy map relative to the Sun. */
+export interface SystemPosition {
+  hostname: string
+  distancePc: number
+  raDeg: number
+  decDeg: number
+  numPlanets: number
+}

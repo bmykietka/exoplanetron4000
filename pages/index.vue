@@ -39,6 +39,7 @@ function formatStarStat(label: string, value: string | null) {
         <SystemSearch v-model="selectedHostname" />
         <button type="button" class="dice-btn" title="Jump to a random system" @click="pickRandomSystem">🎲 Random</button>
         <NuxtLink to="/mixed" class="mixed-link" title="Browse multiple systems at once">🪐 Mixed view</NuxtLink>
+        <NuxtLink to="/galaxy" class="mixed-link" title="See where every known system sits relative to Earth">🌌 Galaxy map</NuxtLink>
       </div>
     </header>
 
