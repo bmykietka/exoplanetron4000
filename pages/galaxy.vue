@@ -29,8 +29,7 @@ onMounted(() => ensureLoaded())
 .back-link {
   position: absolute;
   top: 0.9rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 1rem;
   z-index: 3;
   background: rgba(5, 7, 13, 0.65);
   border: 1px solid var(--border);

@@ -7,6 +7,7 @@ defineProps<{ systems: SystemPosition[] }>()
 
 const router = useRouter()
 const hoveredSystem = ref<SystemPosition | null>(null)
+const viewMode = ref<'local' | 'galaxy'>('local')
 
 function goToSystem(system: SystemPosition) {
   router.push({ path: '/', query: { system: system.hostname } })
@@ -16,8 +17,17 @@ function goToSystem(system: SystemPosition) {
 <template>
   <div class="galaxy-viewer">
     <TresCanvas clear-color="#03050a" :output-color-space="THREE.SRGBColorSpace">
-      <GalaxyMapScene :systems="systems" @hover="hoveredSystem = $event" @select="goToSystem" />
+      <GalaxyMapScene :systems="systems" :view-mode="viewMode" @hover="hoveredSystem = $event" @select="goToSystem" />
     </TresCanvas>
+
+    <div class="mode-toggle" role="tablist" aria-label="Galaxy map mode">
+      <button type="button" :class="{ active: viewMode === 'local' }" role="tab" :aria-selected="viewMode === 'local'" @click="viewMode = 'local'">
+        Local neighborhood
+      </button>
+      <button type="button" :class="{ active: viewMode === 'galaxy' }" role="tab" :aria-selected="viewMode === 'galaxy'" @click="viewMode = 'galaxy'">
+        Milky Way context
+      </button>
+    </div>
 
     <div v-if="hoveredSystem" class="info-card">
       <h3>{{ hoveredSystem.hostname }}</h3>
@@ -31,6 +41,9 @@ function goToSystem(system: SystemPosition) {
     </div>
 
     <p class="hint">Drag to orbit · scroll to zoom · hover a line for its distance · click to explore that system</p>
+    <p v-if="viewMode === 'galaxy'" class="disclaimer">
+      Milky Way backdrop is an illustrative procedural approximation, not real star survey data.
+    </p>
     <p class="count">{{ systems.length.toLocaleString() }} known systems plotted</p>
   </div>
 </template>
@@ -42,6 +55,36 @@ function goToSystem(system: SystemPosition) {
   height: 100%;
   overflow: hidden;
   background: #03050a;
+}
+
+.mode-toggle {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(5, 7, 13, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 2;
+}
+
+.mode-toggle button {
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mode-toggle button.active {
+  background: var(--accent);
+  color: #05070d;
+  font-weight: 600;
 }
 
 .info-card {
@@ -100,6 +143,21 @@ function goToSystem(system: SystemPosition) {
   pointer-events: none;
 }
 
+.disclaimer {
+  position: absolute;
+  bottom: 2.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 0.7rem;
+  font-style: italic;
+  color: var(--text-dim);
+  background: rgba(5, 7, 13, 0.6);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
 .count {
   position: absolute;
   bottom: 0.75rem;
@@ -121,5 +179,11 @@ function goToSystem(system: SystemPosition) {
 
 :global(.galaxy-label--sun) {
   color: #ffe9b8;
+}
+
+:global(.galaxy-label--core) {
+  color: #ffd9a0;
+  font-size: 10px;
+  opacity: 0.75;
 }
 </style>
